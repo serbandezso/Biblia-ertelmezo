@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bibliai Mélységelemző</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,400;0,9..144,600;1,9..144,200;1,9..144,400&family=DM+Mono:wght@300;400&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0d0e0f;
+  --bg2:       #131416;
+  --bg3:       #1a1c1f;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --gold:      #c9a84c;
+  --gold2:     #e8c96a;
+  --gold-dim:  rgba(201,168,76,0.15);
+  --rust:      #a0522d;
+  --sage:      #6b8f6b;
+  --text:      #d4cfc8;
+  --text2:     #8a8580;
+  --text3:     #5a5550;
+  --accent:    #7a6a5a;
+  --radius:    3px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── Grain overlay ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.6;
+}
+
+/* ─── Layout ─── */
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+}
+
+/* ─── Header ─── */
+header {
+  padding: 4rem 0 2.5rem;
+  text-align: center;
+  animation: rise 1s ease both;
+}
+
+.header-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.35em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  opacity: 0.8;
+}
+
+h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 200;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  color: #e8e2d8;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--gold);
+  font-weight: 200;
+}
+
+.header-rule {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 1.8rem auto 1rem;
+}
+
+.header-sub {
+  font-size: 1rem;
+  color: var(--text2);
+  font-style: italic;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ─── Section wrapper ─── */
+.section {
+  margin-bottom: 1.5rem;
+  animation: rise 0.7s ease both;
+}
+.section:nth-child(2) { animation-delay: 0.1s; }
+.section:nth-child(3) { animation-delay: 0.2s; }
+.section:nth-child(4) { animation-delay: 0.3s; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.section-line {
+  flex: 1; height: 1px;
+  background: var(--border);
+}
+
+/* ─── Panel ─── */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
+}
+
+/* ─── API grid ─── */
+.api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.2rem;
+}
+@media(max-width:580px){ .api-grid { grid-template-columns: 1fr; } }
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-group.span2 { grid-column: 1 / -1; }
+
+label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+input[type=text], input[type=password], select, textarea {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.95rem;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.55rem 0.8rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+input[type=text]:focus, input[type=password]:focus,
+select:focus, textarea:focus {
+  border-color: rgba(201,168,76,0.5);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.07);
+}
+
+input[type=password] { letter-spacing: 0.1em; }
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5550'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  padding-right: 2rem;
+}
+
+select option { background: #1a1c1f; }
+
+.key-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text3);
+  cursor: pointer;
+  user-select: none;
+  font-style: italic;
+}
+.key-toggle input { accent-color: var(--gold); cursor: pointer; width: 13px; height: 13px; }
+
+/* Custom URL */
+#custom-url-wrap { display: none; margin-top: 0.8rem; }
+
+/* ─── Passage input ─── */
+.passage-area {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-style: italic;
+  color: #c8c0b0;
+}
+.passage-area::placeholder { color: var(--text3); font-style: italic; }
+
+.ref-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+.ref-row input { flex: 1; min-width: 160px; }
+.ref-row select { max-width: 160px; flex-shrink: 0; }
+
+/* ─── Focus pills ─── */
+.focus-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin: 1.1rem 0 0.5rem;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  padding: 0.32rem 0.75rem;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.18s;
+  user-select: none;
+  text-transform: uppercase;
+}
+.pill:hover { border-color: var(--gold); color: var(--text); }
+.pill.on {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold2);
+}
+
+/* ─── Submit button ─── */
+.btn-wrap { margin-top: 1.4rem; }
+
+.btn-analyze {
+  width: 100%;
+  font-family: 'Fraunces', serif;
+  font-weight: 300;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  padding: 0.85rem 1.5rem;
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.4);
+  border-radius: var(--radius);
+  color: var(--gold2);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.btn-analyze::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, transparent 60%);
+  transition: opacity 0.25s;
+}
+.btn-analyze:hover:not(:disabled) {
+  border-color: rgba(201,168,76,0.7);
+  box-shadow: 0 0 24px rgba(201,168,76,0.1);
+  color: var(--gold2);
+}
+.btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── Results ─── */
+#results-section { display: none; }
+
+.result-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.result-ref {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--gold2);
+}
+
+.result-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  color: var(--text3);
+  white-space: nowrap;
+  margin-top: 0.3rem;
+}
+
+.result-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(201,168,76,0.3), transparent);
+  margin-bottom: 1.6rem;
+}
+
+/* Streaming text container */
+#result-body {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: #ccc5b8;
+}
+
+/* Markdown-rendered content */
+#result-body h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 300;
+  font-size: 1.3rem;
+  color: var(--gold2);
+  margin: 2rem 0 0.6rem;
+  letter-spacing: 0.01em;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#result-body h3 {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin: 1.6rem 0 0.5rem;
+}
+
+#result-body p { margin-bottom: 1rem; }
+
+#result-body strong {
+  color: #e0d8cc;
+  font-weight: 600;
+}
+
+#result-body em { color: #b8b0a4; }
+
+#result-body blockquote {
+  border-left: 2px solid rgba(201,168,76,0.4);
+  margin: 1.2rem 0;
+  padding: 0.6rem 0 0.6rem 1.3rem;
+  color: #a09888;
+  font-style: italic;
+}
+
+#result-body ul {
+  padding-left: 1.4rem;
+  margin-bottom: 1rem;
+}
+#result-body li { margin-bottom: 0.35rem; }
+
+#result-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* Loading */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 0;
+  gap: 1.2rem;
+}
+
+.loader-ring {
+  width: 40px; height: 40px;
+  border: 1px solid var(--border2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1.4s linear infinite;
+}
+
+.loading-text {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(3, end) infinite;
+}
+@keyframes dots {
+  0%   { content: ''; }
+  33%  { content: '.'; }
+  66%  { content: '..'; }
+  100% { content: '...'; }
+}
+
+/* Error */
+.error-box {
+  background: rgba(160,82,45,0.1);
+  border: 1px solid rgba(160,82,45,0.3);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  color: #c87050;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+}
+
+/* Cursor blink for streaming */
+.cursor-blink::after {
+  content: '▋';
+  color: var(--gold);
+  animation: blink 0.8s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+/* History */
+.history-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+}
+.hist-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hist-chip:hover { border-color: var(--gold); color: var(--text2); }
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 3rem 0 1rem;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--text3);
+  line-height: 1.8;
+}
+footer span { display: block; opacity: 0.5; margin-top: 0.3rem; font-size: 0.72rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; font-style: normal; }
+
+/* ─── Animations ─── */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Scroll bar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* Responsive */
+@media(max-width:640px){
+  .panel { padding: 1.1rem 1.1rem; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ─── HEADER ─── -->
+<header>
+  <div class="header-eyebrow">Bibliai Értelmező</div>
+  <h1>A szöveg<br><em>tükre és ajtaja</em></h1>
+  <div class="header-rule"></div>
+  <p class="header-sub">Nem pusztán magyarázat — hanem találkozás. Élő, személyes, őszinte olvasás.</p>
+</header>
+
+<!-- ─── 01 · API ─── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <span class="section-title">AI Kapcsolat</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="panel">
+    <div class="api-grid">
+
+      <div class="field-group">
+        <label>Szolgáltató</label>
+        <select id="provider" onchange="onProviderChange()">
+          <option value="anthropic">Anthropic · Claude</option>
+          <option value="openai">OpenAI · GPT</option>
+          <option value="google">Google · Gemini</option>
+          <option value="custom">Egyéni endpoint</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Modell</label>
+        <select id="model-sel"></select>
+      </div>
+
+      <div class="field-group span2">
+        <label>API Kulcs</label>
+        <input type="password" id="api-key" placeholder="Illeszd be az API kulcsot…" autocomplete="off">
+        <label class="key-toggle">
+          <input type="checkbox" id="show-key" onchange="toggleKey()"> Megjelenítés
+        </label>
+      </div>
+
+    </div>
+
+    <div id="custom-url-wrap">
+      <div class="field-group">
+        <label>Egyéni API URL</label>
+        <input type="text" id="custom-url" placeholder="https://api.example.com/v1/messages">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 02 · SZÖVEG ─── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <span class="section-title">Bibliai Rész</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="panel">
+
+    <div class="ref-row">
+      <input type="text" id="ref-input"
+        placeholder="pl. János 3:16  ·  4Móz 20  ·  Róm 12,3–8">
+      <select id="bible-ver">
+        <option value="Károli">Károli</option>
+        <option value="Új fordítás (2014)">Új ford. 2014</option>
+        <option value="KJV">KJV</option>
+        <option value="NIV">NIV</option>
+        <option value="ESV">ESV</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Szöveg beillesztése (opcionális)</label>
+      <textarea class="passage-area" id="passage-text" rows="5"
+        placeholder="Ha rendelkezésre áll a szöveg, illeszd be ide — az AI pontosabban tud dolgozni. Ha csak a hivatkozást adod meg, az AI maga idézi fel."></textarea>
+    </div>
+
+    <div class="focus-label">Elemzési fókuszok — válassz egyet vagy többet</div>
+    <div class="pills" id="pills-wrap">
+      <span class="pill on" data-f="teljes">Teljes körű</span>
+      <span class="pill" data-f="torteneti">Történeti kontextus</span>
+      <span class="pill" data-f="belo">Belső reakció</span>
+      <span class="pill" data-f="atalakulás">Átalakulás útja</span>
+      <span class="pill" data-f="felelem">Félelem és identitás</span>
+      <span class="pill" data-f="szeretet">Szeretet-mérce</span>
+      <span class="pill" data-f="fegyver">Fegyver vs. ajtó</span>
+      <span class="pill" data-f="langues">Eredeti nyelv</span>
+    </div>
+
+    <div class="btn-wrap">
+      <button class="btn-analyze" id="analyze-btn" onclick="analyze()">
+        Elindítom az elemzést
+      </button>
+    </div>
+
+    <div class="history-row" id="hist-row"></div>
+  </div>
+</div>
+
+<!-- ─── 03 · EREDMÉNY ─── -->
+<div class="section" id="results-section">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <span class="section-title">Értelmezés</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="panel" id="result-panel">
+    <div id="result-header-wrap"></div>
+    <div id="result-body"></div>
+  </div>
+</div>
+
+<footer>
+  „A bibliai szöveg nem fal, hanem ajtó.<br>
+  Nem végleges birtoklásra adatott, hanem találkozásra."
+  <span>Bibliai Mélységelemző · minden értelmezés segédeszköz</span>
+</footer>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════
+//  MODELS
+// ═══════════════════════════════════════════════
+const MODELS = {
+  anthropic: [
+    { v:'claude-sonnet-4-20250514', l:'Claude Sonnet 4' },
+    { v:'claude-opus-4-20250514',   l:'Claude Opus 4' },
+    { v:'claude-haiku-4-5-20251001',l:'Claude Haiku 4.5' },
+  ],
+  openai: [
+    { v:'gpt-4o',       l:'GPT-4o' },
+    { v:'gpt-4o-mini',  l:'GPT-4o Mini' },
+    { v:'o3',           l:'o3' },
+  ],
+  google: [
+    { v:'gemini-2.5-pro',   l:'Gemini 2.5 Pro' },
+    { v:'gemini-2.5-flash', l:'Gemini 2.5 Flash' },
+    { v:'gemini-2.0-flash', l:'Gemini 2.0 Flash' },
+  ],
+  custom: [
+    { v:'custom', l:'Egyéni modell' },
+  ]
+};
+
+// ═══════════════════════════════════════════════
+//  SYSTEM PROMPT (14 pontos keretrendszer)
+// ═══════════════════════════════════════════════
+const SYSTEM = `Te egy mélyen képzett, empatikus bibliai értelmező vagy, aki a következő 14 alapelv szerint dolgozik.
+
+ALAPELVEK:
+
+1. TÜKÖR ÉS AJTÓ — A Biblia nem steril mondatok gyűjteménye, hanem valós emberek lelki küzdelmeiből született. Segíts felismerni a szövegben rejlő emberi félelmeket, vágyakat, sebzettségeket, reményeket. Ne használd a szöveget mások elítélésére vagy spirituális fölény igazolására.
+
+2. HÁROM RÉTEG — Mindig különítsd el:
+   a) Történeti-emberi kontextus: milyen válságra reagál, milyen identitásvédelmi dinamika van jelen
+   b) Olvasó belső reakciója: mi irritál, mi vonz, mitől fél, mivel azonosul
+   c) Az út iránya: milyen belső mozgásra hív, milyen önáltatást leplezhet le
+
+3. SPIRITUÁLIS ELITIZMUS KERÜLÉSE — Soha ne sugalld, hogy egyes emberek magasabb rendűek. A stabilitás és egyszerű hit ugyanolyan értékes, mint a mély kontempláció.
+
+4. A BIBLIA NE VÁLJON FEGYVERRÉ — Ha a szöveg erőszakos, kirekesztő vagy büntető jellegű, helyezd kontextusba. Különböztesd meg: mikor a szeretet szól, mikor a félelem, mikor a túlélési ösztön.
+
+5. TISZTELET A HAGYOMÁNY IRÁNT — Ne gúnyold a hitet vagy vallási hagyományt. Cél az igazabb, mélyebb, emberségesebb olvasás.
+
+6. LASSÍTS — Ne adj túl gyors válaszokat. Engedd meg a nyitva maradó kérdéseket. A szöveg meghívás, nem azonnali megoldás.
+
+7. SZERETET MINT VÉGSŐ MÉRCE — Növeli-e az együttérzést? Mélyíti-e az igazságot? Közelebb visz-e Istenhez, önmagunkhoz és egymáshoz?
+
+8. FÉLELEM ÉS IDENTITÁSVÉDELEM NEM DÉMONIZÁLHATÓ — A közösségi identitás, vallási rend, hagyomány sokszor túlélést és méltóságot hordozott. Segíts különbséget tenni az életet védő rend és a másokat elnyomó bezárulás között.
+
+9. EMBERI ÉS ISTENI ÖSSZEFONÓDÁSA — Ne redukáld pusztán pszichológiára, de ne tekintsd minden emberi reakciót időtlen isteni parancsnak. Az ember saját félelmein és reményein keresztül közvetíti az istenit.
+
+10. ALÁZAT AZ ÉRTELMEZÉSBEN — Soha ne állítsd saját értelmezésedet végső igazságként. Segíts összefüggéseket látni, de nem pótolod a lelkiismeretet, személyes tapasztalatot és közösségi bölcsességet.
+
+11. KÜLSŐ ÉS BELSŐ OLVASÁS — A szöveg olvasható történeti, politikai, hatalmi szemszögből is, de a mélyebb olvasás ott kezdődik, amikor már nem csak másokról szól, hanem az olvasó saját belső világát is tükrözi.
+
+12. SPIRITUÁLIS TAPASZTALAT — Ne állítsd automatikusan, hogy minden spirituális tapasztalat puszta pszichológiai illúzió. Maradj nyitott arra, hogy a pszichológiai, történelmi és spirituális dimenzió egyszerre lehet jelen.
+
+13. HIT ÉS KONTROLL — Segíts felismerni, hogyan válhat a hit önigazolássá vagy kontrolleszközzé, és hogyan nyílhat meg lassan a bizalom, alázat és nem-birtokló kapcsolat felé.
+
+14. BIBLIAI SZEREPLŐK — Ne idealizáld, de ne redukáld sem őket. Az isteni töredékes, törékeny emberi történeteken keresztül jelenik meg.
+
+FORMA:
+- Írj magyarul, mélyen és empatikusan
+- Strukturálj világosan, de ne legyen merev
+- Engedj meg nyitott kérdéseket a végén
+- Légy bőséges és alapos — ne rövidíts le semmit
+- Használj ## fejléceket a fő részekhez`;
+
+// ═══════════════════════════════════════════════
+//  FOCUS PROMPTS
+// ═══════════════════════════════════════════════
+const FOCUS_LABELS = {
+  teljes:    'Teljes körű elemzés',
+  torteneti: 'Történeti kontextus',
+  belo:      'Belső reakció és tükör',
+  atalakulás:'Átalakulás és út',
+  felelem:   'Félelem és identitás',
+  szeretet:  'Szeretet-mérce',
+  fegyver:   'Fegyver vs. ajtó',
+  langues:   'Eredeti nyelvi elemzés',
+};
+
+const FOCUS_EXTRA = {
+  teljes:    'Végezd el a teljes, minden rétegre kiterjedő elemzést a fenti 14 alapelv szerint.',
+  torteneti: 'Fókuszálj elsősorban a 2a és 8. alapelvre: milyen történelmi-közösségi válságra reagál a szöveg? Milyen identitásvédelmi dinamikák vannak jelen?',
+  belo:      'Fókuszálj a 2b és 11. alapelvre: milyen belső reakciókat válthat ki az olvasóból? Hogyan tükrözi az olvasó saját belső világát?',
+  atalakulás:'Fókuszálj a 2c, 6. és 13. alapelvre: milyen belső mozgásra hív? Milyen önáltatást leplez le? Hogyan nyílhat meg a bizalom felé?',
+  felelem:   'Fókuszálj a 4. és 8. alapelvre: hol jelenik meg félelem, identitásvédelem, bezárulás — és hol válik ez életet védővé vagy elnyomóvá?',
+  szeretet:  'Fókuszálj a 7. alapelvre: minden mondatnál vizsgáld meg — növeli-e az együttérzést, mélyíti-e az igazságot, közelebb visz-e Istenhez és egymáshoz?',
+  fegyver:   'Fókuszálj a 4. alapelvre: hogyan volt vagy lehet ezt a szöveget fegyverként használni? Hogyan olvasható ajtóként a félelem helyett?',
+  langues:   'Elemezd a szöveg kulcsszavait eredeti héber/görög kontextusban. Hol veszít a fordítás az árnyalatokból? Milyen fordítási döntések befolyásolják az értelmezést?',
+};
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let history = [];
+let activeFoci = new Set(['teljes']);
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+(function init(){
+  populateModels();
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      const f = p.dataset.f;
+      if (f === 'teljes') {
+        activeFoci.clear(); activeFoci.add('teljes');
+        document.querySelectorAll('.pill').forEach(x => x.classList.remove('on'));
+        p.classList.add('on');
+      } else {
+        activeFoci.delete('teljes');
+        document.querySelector('[data-f="teljes"]').classList.remove('on');
+        if (activeFoci.has(f)) { activeFoci.delete(f); p.classList.remove('on'); }
+        else { activeFoci.add(f); p.classList.add('on'); }
+        if (activeFoci.size === 0) { activeFoci.add('teljes'); document.querySelector('[data-f="teljes"]').classList.add('on'); }
+      }
+    });
+  });
+  document.getElementById('ref-input').addEventListener('keydown', e => { if(e.key==='Enter') analyze(); });
+})();
+
+function populateModels(){
+  const prov = document.getElementById('provider').value;
+  const sel = document.getElementById('model-sel');
+  sel.innerHTML = '';
+  (MODELS[prov]||[]).forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.v; o.textContent = m.l;
+    sel.appendChild(o);
+  });
+}
+
+function onProviderChange(){
+  populateModels();
+  const prov = document.getElementById('provider').value;
+  document.getElementById('custom-url-wrap').style.display = prov==='custom' ? 'block' : 'none';
+}
+
+function toggleKey(){
+  document.getElementById('api-key').type = document.getElementById('show-key').checked ? 'text' : 'password';
+}
+
+// ═══════════════════════════════════════════════
+//  MAIN
+// ═══════════════════════════════════════════════
+async function analyze(){
+  const apiKey  = document.getElementById('api-key').value.trim();
+  const provider= document.getElementById('provider').value;
+  const model   = document.getElementById('model-sel').value;
+  const ref     = document.getElementById('ref-input').value.trim();
+  const passage = document.getElementById('passage-text').value.trim();
+  const bver    = document.getElementById('bible-ver').value;
+
+  if (!apiKey)        return showError('Kérjük add meg az API kulcsot.');
+  if (!ref && !passage) return showError('Add meg a bibliai hivatkozást vagy illeszd be a szöveget.');
+
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({ behavior:'smooth', block:'start' });
+
+  addHistory(ref || passage.slice(0,50)+'…');
+
+  const fociList = [...activeFoci].map(f => FOCUS_LABELS[f]).join(', ');
+  const focusExtra = [...activeFoci].map(f => FOCUS_EXTRA[f]).join('\n');
+
+  let userMsg = '';
+  if (ref)     userMsg += `Bibliai rész: **${ref}** (${bver})\n`;
+  if (passage) userMsg += `\nA szöveg:\n„${passage}"\n`;
+  userMsg += `\nKért fókusz: ${fociList}\n\n${focusExtra}`;
+  userMsg += '\n\nKérlek végezd el a teljes, mély elemzést a megadott alapelvek szerint. Légy bőséges, alapos és empatikus. Strukturálj ## fejlécekkel.';
+
+  showLoading(ref || 'Elemzés', fociList);
+
+  try {
+    let text = '';
+    if (provider === 'anthropic') text = await callAnthropic(apiKey, model, userMsg);
+    else if (provider === 'openai') text = await callOpenAI(apiKey, model, userMsg);
+    else if (provider === 'google') text = await callGoogle(apiKey, model, userMsg);
+    else text = await callCustom(apiKey, model, userMsg);
+
+    showResult(ref || 'Szöveg', fociList, text);
+  } catch(err){
+    showError(err.message || 'Ismeretlen hiba.');
+  } finally {
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  API CALLS
+// ═══════════════════════════════════════════════
+async function callAnthropic(apiKey, model, user){
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({ model, max_tokens:4096, system:SYSTEM, messages:[{role:'user',content:user}] })
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error?.message || JSON.stringify(d));
+  return d.content?.[0]?.text || '';
+}
+
+async function callOpenAI(apiKey, model, user){
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${apiKey}` },
+    body: JSON.stringify({ model, max_tokens:4096, messages:[{role:'system',content:SYSTEM},{role:'user',content:user}] })
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error?.message || JSON.stringify(d));
+  return d.choices?.[0]?.message?.content || '';
+}
+
+async function callGoogle(apiKey, model, user){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts:[{ text: SYSTEM }] },
+      contents:[{ role:'user', parts:[{ text: user }] }],
+      generationConfig:{ maxOutputTokens:8192, temperature:0.75 }
+    })
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error?.message || JSON.stringify(d));
+  const candidate = d.candidates?.[0];
+  const text = candidate?.content?.parts?.map(p => p.text||'').join('') || '';
+  if (!text) throw new Error('Gemini nem adott vissza szöveget. Válasz: '+JSON.stringify(d));
+  if (candidate?.finishReason === 'MAX_TOKENS')
+    return text + '\n\n*[A válasz token limit miatt lett levágva.]*';
+  return text;
+}
+
+async function callCustom(apiKey, model, user){
+  const url = document.getElementById('custom-url').value || 'https://api.anthropic.com/v1/messages';
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':`Bearer ${apiKey}`,
+      'x-api-key': apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({ model, max_tokens:4096, system:SYSTEM, messages:[{role:'user',content:user}] })
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error?.message || JSON.stringify(d));
+  return d.content?.[0]?.text || d.choices?.[0]?.message?.content || '';
+}
+
+// ═══════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════
+function showLoading(ref, foci){
+  document.getElementById('result-header-wrap').innerHTML = `
+    <div class="result-header">
+      <span class="result-ref">${esc(ref)}</span>
+      <span class="result-badge">${esc(foci)}</span>
+    </div>
+    <div class="result-divider"></div>`;
+  document.getElementById('result-body').innerHTML = `
+    <div class="loading-state">
+      <div class="loader-ring"></div>
+      <div class="loading-text">Az elemzés folyamatban van<span class="loading-dots"></span></div>
+    </div>`;
+}
+
+function showResult(ref, foci, text){
+  document.getElementById('result-header-wrap').innerHTML = `
+    <div class="result-header">
+      <span class="result-ref">${esc(ref)}</span>
+      <span class="result-badge">${esc(foci)}</span>
+    </div>
+    <div class="result-divider"></div>`;
+  document.getElementById('result-body').innerHTML = renderMd(text);
+}
+
+function showError(msg){
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('result-header-wrap').innerHTML = '';
+  document.getElementById('result-body').innerHTML = `<div class="error-box">${esc(msg)}</div>`;
+}
+
+// ─── Minimal Markdown renderer ───
+function renderMd(raw){
+  let html = esc(raw);
+  // ## heading
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  // ### heading
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  // hr
+  html = html.replace(/^---$/gm, '<hr>');
+  // bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // blockquote
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  // bullets
+  html = html.replace(/^[-•] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+  // paragraphs (double newline)
+  html = html.replace(/\n\n+/g, '</p><p>');
+  html = '<p>' + html + '</p>';
+  // clean up p around block elements
+  html = html.replace(/<p>(<h[23]>)/g, '$1');
+  html = html.replace(/(<\/h[23]>)<\/p>/g, '$1');
+  html = html.replace(/<p>(<hr>)<\/p>/g, '$1');
+  html = html.replace(/<p>(<blockquote>)/g, '$1');
+  html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
+  html = html.replace(/<p>(<ul>)/g, '$1');
+  html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+  html = html.replace(/<p><\/p>/g, '');
+  return html;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── History ───
+function addHistory(ref){
+  if (!ref) return;
+  history = [ref, ...history.filter(h=>h!==ref)].slice(0,8);
+  const row = document.getElementById('hist-row');
+  row.innerHTML = history.map(h =>
+    `<span class="hist-chip" onclick="loadHist(${JSON.stringify(h)})">${esc(h)}</span>`
+  ).join('');
+}
+
+function loadHist(ref){
+  document.getElementById('ref-input').value = ref;
+  document.getElementById('ref-input').focus();
+}
+</script>
+</body>
+</html>
